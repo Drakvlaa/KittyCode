@@ -1,0 +1,89 @@
+body {
+  margin: 0;
+  background-color: #1e1f1c;
+  color: #F8F8F2;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
+  font-size: 16px;
+}
+
+::-webkit-scrollbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: none; 
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888; 
+}
+
+.file {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+  padding: 10px;
+  min-width: 100px;
+  height: 100% - 21px;
+  background-color: #34352f;
+  border-right: 1px solid #272822;
+  border-bottom: 1px solid #272822;
+  user-select: none;
+  -ms-user-select: none;
+}
+
+.file:hover > .close, .selected > .close {
+  visibility: visible;
+}
+
+.filesTab {
+  display: flex;
+  flex-direction: row;
+  height: 50px;
+  overflow-x: auto;
+}
+
+.close {
+  visibility:hidden;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.selected {
+  background-color: #272822;
+}
+
+.blue {
+  color: #3794ff;
+  cursor: pointer;
+}
+
+#message {
+  user-select: none;
+  position: absolute;
+  z-index: 1000;
+  left: 50px;
+  font-style: italic;
+  cursor: default;
+}
+
+.centered {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.key {
+  background-color: #2b2b2b;
+  border-radius: 5px;
+  padding: 2px 5px;
+}
