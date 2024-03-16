@@ -8,8 +8,8 @@ import 'ace-builds/src-noconflict/ext-language_tools'
 import { useState, useEffect, useRef } from 'react'
 
 const languages = [
-  'javascript',
-  'python'
+  {name: 'JavaScript', extension: '(js)', mode: 'javascript'},
+  {name:'Python', extension: '(py)', mode: 'python'}
 ]
 
 class FileClass {
@@ -25,14 +25,13 @@ class FileClass {
 
 function App() {
   const [files, setFiles] = useState([])
-  const [selectedFile, setSelectedFile] = useState(-1)
+  const [selectedFile, setSelectedFile] = useState(0)
   const [modal, setModal] = useState(null)
   const [inputText, setInputText] = useState("");
   const ace = useRef()
 
   useEffect(() => {
     const handleGetFile = () => {
-      console.log({files, selectedFile})
       ipcRenderer.send('getFile', files[selectedFile]);
     };
 
@@ -46,7 +45,7 @@ function App() {
     const handleCloseFile = () => {
       const updatedFiles = files.filter((_, index) => index !== selectedFile);
       setFiles(updatedFiles);
-      setSelectedFile(Math.max(selectedFile - 1, 0));
+      setSelectedFile(Math.max(Math.min(selectedFile, files.length - 2), 0));
     };
 
     const handleNewFile = (args) => {
@@ -61,13 +60,15 @@ function App() {
     };
 
     const handleNextFile = () => {
-      if (files.length === 0) setSelectedFile(-1);
+      if (files.length === 0) setSelectedFile(0);
       else setSelectedFile((selectedFile + 1) % files.length);
     };
 
     const escape = () => {
       setModal(null)
     };
+
+    document.body.addEventListener('mousedown', escape)
 
     ipcRenderer.on('getFile', handleGetFile);
     ipcRenderer.on('setNewPath', handleSetNewPath);
@@ -79,6 +80,7 @@ function App() {
 
     return () => {
       ipcRenderer.removeAllListeners()
+      document.body.removeEventListener('mousedown', escape)
     }
   }, [files, selectedFile])
 
@@ -95,13 +97,11 @@ function App() {
     setSelectedFile(id);
   };
 
-  const handleFileClose = (id) => {
-    closeFile(id);
-  };
 
-  const closeFile = (id) => {
-    setSelectedFile(selectedFile - 1);
-    setFiles(files.filter((_, index) => index !== id));
+  const handleCloseFile = (id) => {
+    const updatedFiles = files.filter((_, index) => index !== id);
+    setFiles(updatedFiles);
+    setSelectedFile(Math.max(Math.min(id, files.length - 2), 0));
   };
 
   const handleSelectLanguage = () => {
@@ -119,14 +119,19 @@ function App() {
   return (
     <>
       {modal === 'selectLanguage' && (
-        <div className='modal'>
+        <div className='modal' onMouseDown={(e)=>e.stopPropagation()}>
           <input type="text" onChange={handleModalInput} placeholder="Select Language Mode" />
           {languages.map((lang, i) => {
-            if(lang.includes(inputText))
+            if(lang.name.includes(inputText) || lang.mode.includes(inputText))
             return (
               <div key={i} onClick={() => {
-                selectLanguage(lang);
-              }}>{lang}</div>
+                selectLanguage(lang.mode);
+              }}>
+                {lang.name + ' '}
+                <span className='extension'>
+                {lang.extension}
+                </span>
+              </div>
           )})}
         </div>
       )}
@@ -139,7 +144,7 @@ function App() {
             onClick={() => handleFileClick(i)}
           >
             {element.name}
-            <div className="close" onClick={() => handleFileClose(i)}>
+            <div className="close" onClick={() => handleCloseFile(i)}>
               ✕
             </div>
           </div>
@@ -189,8 +194,7 @@ function App() {
       {files.length === 0 && (
         <div className="centered unsel">
           <h1>
-            {process.name}
-            <span id="version"> v{process.version}</span>
+            ~/car_code<span id="version"> v1.0.0</span>
           </h1>
           <div>
             New File <span className="key">Ctrl</span> + <span className="key">N</span>

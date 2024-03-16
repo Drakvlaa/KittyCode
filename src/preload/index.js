@@ -11,7 +11,5 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 
 contextBridge.exposeInMainWorld('process', {
   electron: process.versions.electron,
-  node: process.versions.node,
-  version: process.env.npm_package_version,
-  name: process.env.npm_package_name
+  node: process.versions.node
 })

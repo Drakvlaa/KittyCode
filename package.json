@@ -1,9 +1,9 @@
 {
   "name": "car_code",
   "version": "1.0.0",
-  "description": "An Electron application with React",
+  "description": "code editor",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "car factory",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",

@@ -1,9 +1,10 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join, basename } from 'path'
-import { is } from '@electron-toolkit/utils'
 import fs from 'fs'
 import mime from 'mime-types'
 import config from '../../config.json'
+
+const isDev = process.env.NODE_ENV === 'development'
 
 function saveFile(path, data) {
   fs.writeFile(path, data, (err) => {
@@ -33,14 +34,13 @@ function createWindow() {
   })
 
   mainWindow.removeMenu()
-  mainWindow.webContents.openDevTools()
 
   mainWindow.webContents.on('before-input-event', (event, input) => {
     const send = (action) => () => mainWindow.webContents.send(action)
 
     const shortcut = (sc, fn) => {
       const keys = sc.toLowerCase().split('+')
-      const ctrl = keys.includes('ctrl')
+      const ctrl = keys.includes('ctrl' || 'control')
       const shift = keys.includes('shift')
       const key = keys.filter((key) => key !== 'ctrl' && key !== 'shift')
       if (ctrl == input.control && shift == input.shift && key == input.key.toLowerCase()) {
@@ -84,8 +84,9 @@ function createWindow() {
     })
   })
 
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
