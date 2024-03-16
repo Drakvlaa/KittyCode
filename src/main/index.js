@@ -1,11 +1,23 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join } from 'path'
+import { join, basename } from 'path'
 import { is } from '@electron-toolkit/utils'
-import * as fs from 'fs'
+import fs from 'fs'
+import mime from 'mime-types'
+import config from '../../config.json'
 
-function saveFile(path, code) {
-  fs.writeFile(path, code, function (err) {
-    if (err) throw err
+function saveFile(path, data) {
+  fs.writeFile(path, data, (err) => {
+    if (err) console.error('Error saving file:', err)
+  })
+}
+
+function openFile(path) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(path, 'utf8', (err, data) => {
+      if (err) reject(err)
+      const name = basename(path)
+      resolve({ path, data, name })
+    })
   })
 }
 
@@ -21,28 +33,55 @@ function createWindow() {
   })
 
   mainWindow.removeMenu()
-
   mainWindow.webContents.openDevTools()
+
   mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.control && input.key.toLowerCase() === 's') {
-      mainWindow.webContents.send('getFile')
-      event.preventDefault()
+    const send = (action) => () => mainWindow.webContents.send(action)
+
+    const shortcut = (sc, fn) => {
+      const keys = sc.toLowerCase().split('+')
+      const ctrl = keys.includes('ctrl')
+      const shift = keys.includes('shift')
+      const key = keys.filter((key) => key !== 'ctrl' && key !== 'shift')
+      if (ctrl == input.control && shift == input.shift && key == input.key.toLowerCase()) {
+        fn()
+        event.preventDefault()
+      }
     }
 
-    if (input.control && input.key.toLowerCase() === 'n') {
-      mainWindow.webContents.send('newFile')
-      event.preventDefault()
-    }
+    shortcut('ctrl+s', send('getFile'))
+    shortcut('ctrl+n', send('newFile'))
+    shortcut('ctrl+w', send('closeFile'))
+    shortcut('ctrl+f4', send('closeFile'))
+    shortcut('ctrl+tab', send('nextFile'))
+    shortcut('escape', send('escape'))
+    shortcut('ctrl+o', () => {
+      dialog
+        .showOpenDialog(mainWindow, {
+          properties: ['openFile']
+        })
+        .then((result) => {
+          if (result.canceled) return
+          openFile(result.filePaths[0]).then((result) => {
+            try {
+              const lookup = mime.lookup(result.path)
+              if (!lookup) throw new Error('Invalid file type')
 
-    if (input.control && (input.key.toLowerCase() === 'w' || input.key.toLowerCase() === 'f4')) {
-      mainWindow.webContents.send('closeFile')
-      event.preventDefault()
-    }
+              const [type, subtype] = lookup.split('/')
 
-    if (input.control && input.key.toLowerCase() === 'tab') {
-      mainWindow.webContents.send('nextFile')
-      event.preventDefault()
-    }
+              if (type !== 'text' && type !== 'application')
+                throw new Error(`Unsupported file type ${lookup}`)
+
+              mainWindow.webContents.send('newFile', { ...result, type, subtype })
+            } catch (error) {
+              console.error(error)
+            }
+          })
+        })
+        .catch((err) => {
+          console.error(err)
+        })
+    })
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -53,29 +92,50 @@ function createWindow() {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+    const files = []
+
+    const requests = config.files.map((path) => {
+      return openFile(path)
+        .then((result) => {
+          const lookup = mime.lookup(result.path)
+          if (lookup && (lookup.startsWith('text/') || lookup.startsWith('application/'))) {
+            files.push({ ...result, type: lookup.split('/')[0], subtype: lookup.split('/')[1] })
+          }
+        })
+        .catch((error) => {
+          console.error('Error reading file:', error)
+        })
+    })
+
+    Promise.all(requests).then(() => mainWindow.webContents.send('filesFromArray', files))
   })
 
-  ipcMain.on('returnFile', async (event, ...args) => {
-    let { path, code } = args[0]
+  ipcMain.on('save', (event, ...args) => {
+    let files = args[0]
+    const data = `{"files": ${JSON.stringify(files.map((file) => file.path))}}`
+    saveFile(join(__dirname, '../../config.json'), data)
+  })
+
+  ipcMain.on('getFile', (event, ...args) => {
+    let { path, data } = args[0]
     if (path.length === 0) {
       dialog.showSaveDialog().then((result) => {
         if (result.canceled) return
-        path = result.filePath
-        mainWindow.webContents.send('setNewPath', path)
-        saveFile(path, code)
+        const newPath = result.filePath
+        const name = basename(newPath)
+        mainWindow.webContents.send('setNewPath', { path: newPath, name })
+        saveFile(newPath, data)
       })
     } else {
-      saveFile(path, code)
+      saveFile(path, data)
     }
   })
 }
 
-app.whenReady().then(() => {
-  createWindow()
+app.whenReady().then(createWindow)
 
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
+app.on('activate', function () {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
 
 app.on('window-all-closed', () => {

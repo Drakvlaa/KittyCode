@@ -1,4 +1,5 @@
 import AceEditor from 'react-ace'
+import 'ace-builds/src-noconflict/ace';
 import 'ace-builds/src-noconflict/mode-javascript'
 import 'ace-builds/src-noconflict/mode-text'
 import "ace-builds/src-noconflict/mode-python";
@@ -6,117 +7,151 @@ import 'ace-builds/src-noconflict/theme-monokai'
 import 'ace-builds/src-noconflict/ext-language_tools'
 import { useState, useEffect, useRef } from 'react'
 
-Array.prototype.copy = function () {
-  return [...this]
-}
-
-Array.prototype.delete = function (index) {
-  return [...this.slice(0, index), ...this.slice(index + 1)]
-}
-
-Array.prototype.add = function (index, element) {
-  return [...this.slice(0, index), element, ...this.slice(index)]
-}
+const languages = [
+  'javascript',
+  'python'
+]
 
 class FileClass {
-  constructor() {
-    this.path = ''
-    this.code = ''
+  constructor({ type, subtype, path, data, name } = {}) {
+    this.type = type || ''
+    this.mode = subtype && subtype !== "plain" ? subtype : 'text'
+    this.path = path || ''
+    this.data = data || ''
+    this.name = name || 'Untitled'
     this.cursorPosition = { row: 0, column: 0 }
-    this.mode = 'text'
   }
 }
 
 function App() {
   const [files, setFiles] = useState([])
   const [selectedFile, setSelectedFile] = useState(-1)
-  const [mode, setMode] = useState('text')
-
-  function handler(e) {
-    const id = Number(e.target.id)
-    if (isNaN(id) || selectedFile === id) return
-    setSelectedFile(id)
-  }
-
-  function closeFileButton(e) {
-    const id = Number(e.target.parentNode.id)
-    closeFile(id)
-  }
-
-  function closeFile(id) {
-    setFiles(files.delete(id))
-    setSelectedFile(files.length - 2)
-  }
-
-  function selectLanguage() {
-    files[selectedFile].mode = 'javascript'
-    setFiles(files.copy())
-  }
-
-  function File({ path, id }, key) {
-    return (
-      <div
-        key={key}
-        id={id}
-        className={`file ${selectedFile === id ? 'selected' : ''}`}
-        onClick={handler}
-      >
-        {path ? path : 'Untitled'}
-        <div className="close" onClick={closeFileButton}>
-          ✕
-        </div>
-      </div>
-    )
-  }
+  const [modal, setModal] = useState(null)
+  const [inputText, setInputText] = useState("");
+  const ace = useRef()
 
   useEffect(() => {
-    if (selectedFile > -1) setMode(files[selectedFile].mode)
-    else setMode('text')
+    const handleGetFile = () => {
+      console.log({files, selectedFile})
+      ipcRenderer.send('getFile', files[selectedFile]);
+    };
 
-    ipcRenderer.on('getFile', () => {
-      ipcRenderer.send('returnFile', files[selectedFile])
-    })
+    const handleSetNewPath = (args) => {
+      const updatedFiles = [...files];
+      updatedFiles[selectedFile].path = args[0].path;
+      updatedFiles[selectedFile].name = args[0].name;
+      setFiles(updatedFiles);
+    };
 
-    ipcRenderer.on('setNewPath', (args) => {
-      files[selectedFile].path = args[0]
-      setFiles(files.copy())
-    })
+    const handleCloseFile = () => {
+      const updatedFiles = files.filter((_, index) => index !== selectedFile);
+      setFiles(updatedFiles);
+      setSelectedFile(Math.max(selectedFile - 1, 0));
+    };
 
-    ipcRenderer.on('closeFile', () => {
-      closeFile(selectedFile)
-    })
+    const handleNewFile = (args) => {
+      setFiles([...files, new FileClass(args[0])]);
+      setSelectedFile(files.length);
+    };
 
-    ipcRenderer.on('newFile', () => {
-      setFiles([...files, new FileClass()])
-      setSelectedFile(files.length)
-    })
+    const handleFilesFromArray = (args) => {
+      const newFiles = args[0].map(file => new FileClass(file));
+      setFiles([...files, ...newFiles]);
+      setSelectedFile(files.length + newFiles.length - 1);
+    };
 
-    ipcRenderer.on('nextFile', () => {
-      if(files.length === 0) setSelectedFile(-1)
-      else if (selectedFile === files.length - 1) setSelectedFile(0)
-      else setSelectedFile(selectedFile + 1)
-    })
+    const handleNextFile = () => {
+      if (files.length === 0) setSelectedFile(-1);
+      else setSelectedFile((selectedFile + 1) % files.length);
+    };
+
+    const escape = () => {
+      setModal(null)
+    };
+
+    ipcRenderer.on('getFile', handleGetFile);
+    ipcRenderer.on('setNewPath', handleSetNewPath);
+    ipcRenderer.on('closeFile', handleCloseFile);
+    ipcRenderer.on('newFile', handleNewFile);
+    ipcRenderer.on('filesFromArray', handleFilesFromArray);
+    ipcRenderer.on('nextFile', handleNextFile);
+    ipcRenderer.on('escape', escape);
 
     return () => {
-      ipcRenderer.removeAllListeners('getFile')
-      ipcRenderer.removeAllListeners('setNewPath')
-      ipcRenderer.removeAllListeners('closeFile')
-      ipcRenderer.removeAllListeners('newFile')
+      ipcRenderer.removeAllListeners()
     }
   }, [files, selectedFile])
 
+  useEffect(() => {
+    ipcRenderer.send('save', files)
+  }, [files])
+
+  const handleModalInput = (e) => {
+    var lowerCase = e.target.value.toLowerCase();
+    setInputText(lowerCase);
+  };
+
+  const handleFileClick = (id) => {
+    setSelectedFile(id);
+  };
+
+  const handleFileClose = (id) => {
+    closeFile(id);
+  };
+
+  const closeFile = (id) => {
+    setSelectedFile(selectedFile - 1);
+    setFiles(files.filter((_, index) => index !== id));
+  };
+
+  const handleSelectLanguage = () => {
+    setModal('selectLanguage')
+  }
+
+  const selectLanguage = (lang) => {
+    const updatedFiles = [...files];
+    updatedFiles[selectedFile].mode = lang
+    setFiles(updatedFiles)
+    setModal(null)
+    setInputText("")
+  }
+
   return (
     <>
+      {modal === 'selectLanguage' && (
+        <div className='modal'>
+          <input type="text" onChange={handleModalInput} placeholder="Select Language Mode" />
+          {languages.map((lang, i) => {
+            if(lang.includes(inputText))
+            return (
+              <div key={i} onClick={() => {
+                selectLanguage(lang);
+              }}>{lang}</div>
+          )})}
+        </div>
+      )}
       <div className="filesTab">
         {files.map((element, i) => (
-          <File key={i} id={i} path={element.path} />
+          <div
+            key={i}
+            className={`file ${selectedFile === i ? 'selected' : ''}`}
+            title={element.path}
+            onClick={() => handleFileClick(i)}
+          >
+            {element.name}
+            <div className="close" onClick={() => handleFileClose(i)}>
+              ✕
+            </div>
+          </div>
         ))}
-        <div className="scrollbar"></div>
       </div>
       <div id="code">
-        {files.length > 0 && (files[selectedFile].mode === 'text' ? files[selectedFile].code.length === 0 : false) && (
+        {files.length > 0 &&
+          files[selectedFile].mode === 'text' &&
+          files[selectedFile].data.length === 0 &&
+          files[selectedFile].path === '' && (
             <div id="message">
-              <span className="blue" onClick={selectLanguage}>
+              <span className="blue" onClick={handleSelectLanguage}>
                 Select a language
               </span>{' '}
               to get started.
@@ -124,17 +159,20 @@ function App() {
               Start typing to dismiss this.
             </div>
           )}
+
         {files.length > 0 && (
           <AceEditor
-            height="100vh"
+            ref={ace}
+            height="100%"
             width="100%"
-            value={files[selectedFile].code}
-            mode={mode}
+            value={files[selectedFile].data}
+            mode={files[selectedFile].mode}
             theme="monokai"
             fontSize="16px"
             onChange={(value) => {
-              files[selectedFile].code = value
-              setFiles(files.copy())
+              const updatedFiles = [...files]
+              updatedFiles[selectedFile].data = value
+              setFiles(updatedFiles)
             }}
             highlightActiveLine={true}
             setOptions={{
@@ -143,15 +181,25 @@ function App() {
               tabSize: 4
             }}
             showPrintMargin={false}
+            editorProps={{ $blockScrolling: true }}
           />
         )}
       </div>
 
       {files.length === 0 && (
-        <div className="centered">
-          New File&nbsp;<span className="key">Ctrl</span>&nbsp;+&nbsp;<span className="key">N</span>
+        <div className="centered unsel">
+          <h1>
+            {process.name}
+            <span id="version"> v{process.version}</span>
+          </h1>
+          <div>
+            New File <span className="key">Ctrl</span> + <span className="key">N</span>
+          </div>
+          <div>
+            Open File <span className="key">Ctrl</span> + <span className="key">O</span>
+          </div>
         </div>
-        )}
+      )}
     </>
   )
 }

@@ -1,5 +1,5 @@
 {
-  "name": "electron-app",
+  "name": "car_code",
   "version": "1.0.0",
   "description": "An Electron application with React",
   "main": "./out/main/index.js",
@@ -21,6 +21,7 @@
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "ace-builds": "^1.32.7",
+    "mime-types": "^2.1.35",
     "react-ace": "^10.1.0"
   },
   "devDependencies": {
