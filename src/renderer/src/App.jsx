@@ -172,7 +172,7 @@ function App() {
             width="100%"
             value={files[selectedFile].data}
             mode={files[selectedFile].mode}
-            theme="monokai"
+            theme="dracula"
             fontSize="16px"
             onChange={(value) => {
               const updatedFiles = [...files]
@@ -194,7 +194,7 @@ function App() {
       {files.length === 0 && (
         <div className="centered unsel">
           <h1>
-            ~/car_code<span id="version"> v1.0.0</span>
+            ~/Kitty_code<span id="version"> v1.0.0</span>
           </h1>
           <div>
             New File <span className="key">Ctrl</span> + <span className="key">N</span>
