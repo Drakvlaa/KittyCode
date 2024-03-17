@@ -3,6 +3,7 @@ import { join, basename } from 'path'
 import fs from 'fs'
 import mime from 'mime-types'
 import config from '../../config.json'
+import dirTree from 'directory-tree'
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -27,6 +28,7 @@ function createWindow() {
     width: 900,
     height: 670,
     show: false,
+    frame: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -38,14 +40,14 @@ function createWindow() {
   mainWindow.webContents.on('before-input-event', (event, input) => {
     const send = (action) => () => mainWindow.webContents.send(action)
 
-    const shortcut = (sc, fn) => {
+    const shortcut = (sc, fn, prevent = true) => {
       const keys = sc.toLowerCase().split('+')
       const ctrl = keys.includes('ctrl' || 'control')
       const shift = keys.includes('shift')
       const key = keys.filter((key) => key !== 'ctrl' && key !== 'shift')
       if (ctrl == input.control && shift == input.shift && key == input.key.toLowerCase()) {
         fn()
-        event.preventDefault()
+        if (prevent) event.preventDefault()
       }
     }
 
@@ -54,7 +56,21 @@ function createWindow() {
     shortcut('ctrl+w', send('closeFile'))
     shortcut('ctrl+f4', send('closeFile'))
     shortcut('ctrl+tab', send('nextFile'))
-    shortcut('escape', send('escape'))
+    shortcut('ctrl+b', send('closeSidePanel'))
+    shortcut('ctrl+k', () => {
+      dialog
+        .showOpenDialog(mainWindow, {
+          properties: ['openDirectory']
+        })
+        .then((result) => {
+          if (result.canceled) return
+          const tree = dirTree(result.filePaths[0], { attributes: ['type', 'extension'] })
+          mainWindow.webContents.send('openFolder', tree)
+        })
+        .catch((err) => {
+          console.error(err)
+        })
+    })
     shortcut('ctrl+o', () => {
       dialog
         .showOpenDialog(mainWindow, {
@@ -111,9 +127,40 @@ function createWindow() {
     Promise.all(requests).then(() => mainWindow.webContents.send('filesFromArray', files))
   })
 
+  ipcMain.on('minimize', (event, ...args) => {
+    mainWindow.minimize()
+  })
+
+  ipcMain.on('maximize', (event, ...args) => {
+    if (mainWindow.isMaximized()) mainWindow.unmaximize()
+    else mainWindow.maximize()
+  })
+
+  ipcMain.on('close', (event, ...args) => {
+    mainWindow.close()
+  })
+
+  ipcMain.on('openFile', (event, ...args) => {
+    openFile(args[0]).then((result) => {
+      try {
+        const lookup = mime.lookup(result.path)
+        if (!lookup) throw new Error('Invalid file type')
+
+        const [type, subtype] = lookup.split('/')
+
+        if (type !== 'text' && type !== 'application')
+          throw new Error(`Unsupported file type ${lookup}`)
+
+        mainWindow.webContents.send('newFile', { ...result, type, subtype })
+      } catch (error) {
+        console.error(error)
+      }
+    })
+  })
+
   ipcMain.on('save', (event, ...args) => {
     let files = args[0]
-    const data = `{"files": ${JSON.stringify(files.map((file) => file.path))}}`
+    const data = `{"files": ${JSON.stringify(files.map((file) => file.path).filter((path) => path.length !== 0))}}`
     saveFile(join(__dirname, '../../config.json'), data)
   })
 

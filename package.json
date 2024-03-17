@@ -21,8 +21,10 @@
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "ace-builds": "^1.32.7",
+    "directory-tree": "^3.5.1",
     "mime-types": "^2.1.35",
-    "react-ace": "^10.1.0"
+    "react-ace": "^10.1.0",
+    "react-resizable-panels": "^2.0.13"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",

@@ -1,5 +1,6 @@
 :root {
   --filesTabHeight: 40px;
+  --titleBarHeight: 40px;
 }
 
 body {
@@ -9,6 +10,11 @@ body {
   color: #F8F8F2;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
   font-size: 16px;
+  user-select: none;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 #root {
@@ -20,6 +26,7 @@ body {
   bottom: 0;
   left: 0;
   height: 3px;
+  width: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -30,7 +37,7 @@ body {
   background: #888; 
 }
 
-.file {
+.fileTab, .selectedFileTab {
   position: relative;
   display: flex;
   justify-content: space-between;
@@ -46,7 +53,7 @@ body {
   -ms-user-select: none;
 }
 
-.file:hover > .close, .selected > .close {
+.fileTab:hover > .closeFileTab, .selectedFileTab > .closeFileTab {
   visibility: visible;
 }
 
@@ -57,31 +64,22 @@ body {
   overflow-x: auto;
 }
 
-.close {
+.closeFileTab {
   visibility:hidden;
   cursor: pointer;
   margin-left: 5px;
 }
 
-.selected {
+.selectedFileTab {
   background-color: #272822;
 }
 
-.blue {
+.link {
   color: #3794ff;
   cursor: pointer;
 }
 
-#message {
-  user-select: none;
-  position: absolute;
-  z-index: 1000;
-  left: 50px;
-  font-style: italic;
-  cursor: default;
-}
-
-.centered {
+.mainPanel {
   width: 100vw;
   height: 100vh;
   position: fixed;
@@ -92,13 +90,14 @@ body {
   align-items: center;
   flex-direction: column;
   gap: 10px;
+  z-index: -1;
 }
 
-.centered > * {
+.mainPanel > * {
   width: 400px;
 }
 
-.centered > h1 {
+.mainPanel > h1 {
   font-size: 60px;
   margin: 0;
 }
@@ -109,15 +108,49 @@ body {
   padding: 2px 5px;
 }
 
-.unsel {
+.noSelection {
   user-select: none;
 }
 
-#code {
+#selectLanguageMessage {
+  user-select: none;
+  position: absolute;
+  display:inline-block;
+  z-index: 1000;
+  left: 50px;
+  top: 0;
+  font-style: italic;
+  cursor: default;
+}
+
+#rightPanel {
+  position: relative;
   height: calc(100% - var(--filesTabHeight));
 }
 
-#version {
+#allPanels {
+  height: calc(100% - var(--titleBarHeight)) !important;
+}
+
+.leftPanelTabElement:hover {
+  background-color: #3e3d32;
+}
+
+.leftPanelTab {
+  background-color: #1e1f1c;
+  max-height: 80%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.leftPanelTabTitle {
+  background-color: #2b2b2b;
+  padding: 3px 10px;
+  position: sticky;
+  top: 0;
+}
+
+#titleVersion {
   font-size: medium;
   opacity: 0.3;
 }
@@ -125,24 +158,22 @@ body {
 .modal {
   user-select: none;
   position: fixed;
-  top: 0;
+  top: 5px;
   left: calc(50% - 200px);
   width: 400px;
-  height: 300px;
+  height: auto;
   background-color: #1e1f1c;
   z-index: 1001;
   padding: 10px;
   border-radius: 5px;
   box-shadow: 0px 0px 20px 1px rgba(0, 0, 0, 0.7);
 }
-.modal > input::placeholder {
-  color: #80827c;
-}
+
 .modal > input {
   background-color: #414339;
   box-sizing: border-box;
   outline: none;
-  width: 390px;
+  width: 395px;
   border-radius: 2px;
   padding: 8px 8px;
   margin: 8px 0;
@@ -152,6 +183,73 @@ body {
   color: #F8F8F2;
 }
 
-.extension {
+.modal > input::placeholder {
+  color: #80827c;
+}
+
+.languageExtension {
   opacity: 0.3;
+}
+
+.languagesList {
+  height: 250px;
+  overflow-y: scroll;
+}
+
+.modalOption, .modalSelectedOption {
+  padding: 5px;
+}
+
+.modalOption:hover {
+  background-color: #3e3d32;
+}
+
+.modalSelectedOption {
+  background-color: #414339;
+  border-radius: 4px;
+}
+
+#titleBar {
+  user-select: none;
+  background-color: #1e1f1c;
+  height: var(--titleBarHeight);
+  -webkit-app-region: drag;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10000;
+}
+
+#titleBar > * {
+  -webkit-app-region: no-drag;
+  z-index: 10000;
+}
+
+#windowControls, #menuBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-content: center;
+}
+
+#menuBar {
+  padding: 20px;
+  gap: 20px;
+}
+
+#windowControls > div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  transition: 0.1s;
+}
+
+#windowControls > div:hover {
+  background-color: #414339;
+}
+
+#windowControls > div:nth-child(3):hover {
+  background-color: #d42222;
 }
