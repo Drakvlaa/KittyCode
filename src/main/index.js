@@ -2,14 +2,13 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join, basename } from 'path'
 import fs from 'fs'
 import mime from 'mime-types'
-import config from '../../config.json'
 import dirTree from 'directory-tree'
 
 const isDev = process.env.NODE_ENV === 'development'
 
 function saveFile(path, data) {
   fs.writeFile(path, data, (err) => {
-    if (err) console.error('Error saving file:', err)
+    console.error(err)
   })
 }
 
@@ -51,7 +50,7 @@ function createWindow() {
       }
     }
 
-    shortcut('ctrl+s', send('getFile'))
+    shortcut('ctrl+s', send('saveFile'))
     shortcut('ctrl+n', send('newFile'))
     shortcut('ctrl+w', send('closeFile'))
     shortcut('ctrl+f4', send('closeFile'))
@@ -88,9 +87,9 @@ function createWindow() {
               if (type !== 'text' && type !== 'application')
                 throw new Error(`Unsupported file type ${lookup}`)
 
-              mainWindow.webContents.send('newFile', { ...result, type, subtype })
-            } catch (error) {
-              console.error(error)
+              mainWindow.webContents.send('openFile', { ...result, type, subtype })
+            } catch (err) {
+              console.error(err)
             }
           })
         })
@@ -102,29 +101,13 @@ function createWindow() {
 
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-    // mainWindow.webContents.openDevTools() 
+    mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
-    const files = []
-
-    const requests = config.files.map((path) => {
-      return openFile(path)
-        .then((result) => {
-          const lookup = mime.lookup(result.path)
-          if (lookup && (lookup.startsWith('text/') || lookup.startsWith('application/'))) {
-            files.push({ ...result, type: lookup.split('/')[0], subtype: lookup.split('/')[1] })
-          }
-        })
-        .catch((error) => {
-          console.error('Error reading file:', error)
-        })
-    })
-
-    Promise.all(requests).then(() => mainWindow.webContents.send('filesFromArray', files))
   })
 
   ipcMain.on('minimize', (event, ...args) => {
@@ -151,20 +134,14 @@ function createWindow() {
         if (type !== 'text' && type !== 'application')
           throw new Error(`Unsupported file type ${lookup}`)
 
-        mainWindow.webContents.send('newFile', { ...result, type, subtype })
+        mainWindow.webContents.send('openFile', { ...result, type, subtype })
       } catch (error) {
         console.error(error)
       }
     })
   })
 
-  ipcMain.on('save', (event, ...args) => {
-    let files = args[0]
-    const data = `{"files": ${JSON.stringify(files.map((file) => file.path).filter((path) => path.length !== 0))}}`
-    saveFile(join(__dirname, '../../config.json'), data)
-  })
-
-  ipcMain.on('getFile', (event, ...args) => {
+  ipcMain.on('saveFile', (event, ...args) => {
     let { path, data } = args[0]
     if (path.length === 0) {
       dialog.showSaveDialog().then((result) => {

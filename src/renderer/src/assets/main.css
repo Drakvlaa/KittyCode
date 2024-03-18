@@ -53,10 +53,6 @@ html {
   -ms-user-select: none;
 }
 
-.fileTab:hover > .closeFileTab, .selectedFileTab > .closeFileTab {
-  visibility: visible;
-}
-
 .filesTab {
   display: flex;
   flex-direction: row;
@@ -65,9 +61,26 @@ html {
 }
 
 .closeFileTab {
-  visibility:hidden;
+  visibility: hidden;
   cursor: pointer;
+  position: relative;
   margin-left: 5px;
+}
+
+.changedFile::after {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  content: '●';
+  visibility: visible;
+}
+
+.fileTab:hover > .closeFileTab:not(.changedFile), .selectedFileTab > .closeFileTab:not(.changedFile), .closeFileTab:hover {
+  visibility: visible;
+}
+
+.closeFileTab:hover.changedFile::after {
+  visibility: hidden;
 }
 
 .selectedFileTab {
@@ -106,6 +119,11 @@ html {
   background-color: #2b2b2b;
   border-radius: 5px;
   padding: 2px 5px;
+}
+
+#version {
+  font-size: 15px;
+  opacity:  0.3;
 }
 
 .noSelection {

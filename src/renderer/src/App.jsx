@@ -38,16 +38,13 @@ class FileClass {
     this.path = path || ''
     this.data = data || ''
     this.name = name || 'Untitled'
-    this.cursorPosition = { row: 0, column: 0 }
+    this.isChanged = false
   }
 }
 
-let fileTreeData = {
-};
-
 function TreeNode({ node, className }) {
   const [isOpen, setIsOpen] = useState(false)
-  
+
   const handleToggle = () => {
     if(node.type === 'directory') setIsOpen(!isOpen)
     else ipcRenderer.send('openFile', node.path)
@@ -70,8 +67,20 @@ function TreeNode({ node, className }) {
 }
 
 function App() {
-  const [files, setFiles] = useState([])
-  const [selectedFile, setSelectedFile] = useState(0)
+  if (localStorage.getItem("fileTreeData") === null) {
+    localStorage.setItem('fileTreeData', "{}")
+  }
+  
+  if (localStorage.getItem("files") === null) {
+    localStorage.setItem('files', "[]")
+  }
+
+  if (localStorage.getItem("selectedFile") === null) {
+    localStorage.setItem('selectedFile', 0)
+  }
+
+  const [files, setFiles] = useState(JSON.parse(localStorage.getItem("files")))
+  const [selectedFile, setSelectedFile] = useState(+localStorage.getItem("selectedFile"))
 
   const [showLeftPanel, setShowLeftPanel] = useState(true)
 
@@ -116,10 +125,17 @@ function App() {
   }
 
   useEffect(() => {
+    localStorage.setItem('selectedFile', selectedFile)
+  }, [selectedFile])
+
+  useEffect(() => {
     if (files.length === 0 && modal === 'selectLanguage') setModal(null)
 
-    const handleGetFile = () => {
-      ipcRenderer.send('getFile', files[selectedFile])
+    const handleSaveFile = () => {
+      ipcRenderer.send('saveFile', files[selectedFile])
+      const updatedFiles = [...files]
+      updatedFiles[selectedFile].isChanged = false
+      setFiles(updatedFiles)
     }
 
     const handleSetNewPath = (args) => {
@@ -135,15 +151,14 @@ function App() {
       setSelectedFile(Math.max(Math.min(selectedFile, files.length - 2), 0))
     }
 
-    const handleNewFile = (args) => {
+    const handleOpenFile = (args) => {
       setFiles([...files, new FileClass(args[0])])
       setSelectedFile(files.length)
     }
 
-    const handleFilesFromArray = (args) => {
-      const newFiles = args[0].map((file) => new FileClass(file))
-      setFiles([...files, ...newFiles])
-      setSelectedFile(files.length + newFiles.length - 1)
+    const handleNewFile = (args) => {
+      setFiles([...files, new FileClass()])
+      setSelectedFile(files.length)
     }
 
     const handleNextFile = () => {
@@ -152,31 +167,31 @@ function App() {
     }
 
     const handleOpenFolder = (args) => {
-      fileTreeData = args[0]
+      localStorage.setItem('fileTreeData', JSON.stringify(args[0]))
       setFiles([...files])
     }
 
-    ipcRenderer.on('getFile', handleGetFile)
-    ipcRenderer.on('setNewPath', handleSetNewPath)
-    ipcRenderer.on('closeFile', handleCloseFile)
+    ipcRenderer.on('saveFile', handleSaveFile)
     ipcRenderer.on('newFile', handleNewFile)
-    ipcRenderer.on('filesFromArray', handleFilesFromArray)
+    ipcRenderer.on('closeFile', handleCloseFile)
+    ipcRenderer.on('openFile', handleOpenFile)
     ipcRenderer.on('nextFile', handleNextFile)
     ipcRenderer.on('openFolder', handleOpenFolder)
+    ipcRenderer.on('setNewPath', handleSetNewPath)
 
     return () => {
-      ipcRenderer.removeAllListeners('getFile')
-      ipcRenderer.removeAllListeners('setNewPath')
-      ipcRenderer.removeAllListeners('closeFile')
+      ipcRenderer.removeAllListeners('saveFile')
       ipcRenderer.removeAllListeners('newFile')
-      ipcRenderer.removeAllListeners('filesFromArray')
+      ipcRenderer.removeAllListeners('closeFile')
+      ipcRenderer.removeAllListeners('openFile')
       ipcRenderer.removeAllListeners('nextFile')
       ipcRenderer.removeAllListeners('openFolder')
+      ipcRenderer.removeAllListeners('setNewPath')
     }
   }, [files, selectedFile])
 
   useEffect(() => {
-    ipcRenderer.send('save', files)
+    localStorage.setItem('files', JSON.stringify(files))
   }, [files])
 
   useEffect(() => {
@@ -296,7 +311,7 @@ function App() {
             <div className='leftPanelTabTitle'>OPEN EDITORS</div>
           </div>
           <div className='leftPanelTab'>
-            <TreeNode node={fileTreeData} className='leftPanelTabTitle' />
+            <TreeNode node={JSON.parse(localStorage.getItem('fileTreeData'))} className='leftPanelTabTitle' />
           </div>
           </Panel>
           <PanelResizeHandle />
@@ -312,7 +327,7 @@ function App() {
             onClick={() => handleFileClick(i)}
           >
             {element.name}
-            <div className="closeFileTab" onClick={(e) => {handleCloseFile(i); e.stopPropagation()}}>
+            <div className={`closeFileTab ${element.isChanged ? 'changedFile' : ''}`} onClick={(e) => {handleCloseFile(i); e.stopPropagation()}}>
               ✕
             </div>
           </div>
@@ -340,11 +355,12 @@ function App() {
             width="100%"
             value={files[selectedFile].data}
             mode={files[selectedFile].mode}
-            theme="dracula"
+            theme="monokai"
             fontSize="16px"
             onChange={(value) => {
               const updatedFiles = [...files]
               updatedFiles[selectedFile].data = value
+              updatedFiles[selectedFile].isChanged = true
               setFiles(updatedFiles)
             }}
             highlightActiveLine={true}
@@ -364,7 +380,7 @@ function App() {
       {files.length === 0 && (
         <div className="mainPanel noSelection">
           <h1>
-            ~/car_code<span id="version"> v1.0.0</span>
+            ~/car_code<span id="version"> v1.0.2</span>
           </h1>
           <div>
             New File <span className="key">Ctrl</span> + <span className="key">N</span>
