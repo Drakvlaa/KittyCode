@@ -1,15 +1,15 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld('ipcRenderer', {
+contextBridge.exposeInMainWorld("ipcRenderer", {
   send: (event, data) => ipcRenderer.send(event, data),
-  on: (event, fn) => ipcRenderer.on(event, (event, ...args) => fn(args)),
+  on: (event, fn) => ipcRenderer.on(event, (_event, ...args) => fn(args)),
   removeAllListeners: (event) => {
-    if (event) ipcRenderer.removeAllListeners(event)
-    else ipcRenderer.removeAllListeners()
+    if (event) ipcRenderer.removeAllListeners(event);
+    else ipcRenderer.removeAllListeners();
   }
-})
+});
 
-contextBridge.exposeInMainWorld('process', {
+contextBridge.exposeInMainWorld("process", {
   electron: process.versions.electron,
   node: process.versions.node
-})
+});
