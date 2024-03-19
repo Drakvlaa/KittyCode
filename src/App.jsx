@@ -8,7 +8,6 @@ import "ace-builds/src-noconflict/theme-monokai";
 import "ace-builds/src-noconflict/ext-language_tools";
 import { useState, useEffect, useRef } from "react";
 import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
-import { extension } from "mime-types";
 
 const closest = (arr, goal) => {
   return arr.reduce((prev, curr) => {
@@ -27,7 +26,9 @@ const languages = [
   { name: "JavaScript", extension: "(js)", mode: "javascript" },
   { name: "Python", extension: "(py)", mode: "python" },
   { name: "HTML", extension: "(html)", mode: "html" },
-  { name: "Python", extension: "(py)", mode: "python" }
+  { name: "Python", extension: "(py)", mode: "python" },
+  { name: "Rust", extension: "(rs)", mode: "rust" },
+  { name: "JavaScript JSX", extension: "(jsx)", mode: "javascriptx" }
 ].sort((a, b) => a.name.localeCompare(b.name));
 
 class FileClass {
@@ -430,7 +431,7 @@ export default function App() {
       {files.length === 0 && (
         <div className="mainPanel noSelection">
           <h1>
-            ~/car_code<span id="version"> v1.0.2</span>
+            ~/KittyCode<span id="version"> v1.0.2</span>
           </h1>
           <div>
             New File <span className="key">Ctrl</span> + <span className="key">N</span>
