@@ -54,6 +54,7 @@ html {
 }
 
 .filesTab {
+  position: relative;
   display: flex;
   flex-direction: row;
   height: var(--filesTabHeight);

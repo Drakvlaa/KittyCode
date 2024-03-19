@@ -9,6 +9,19 @@ import 'ace-builds/src-noconflict/ext-language_tools'
 import { useState, useEffect, useRef } from 'react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 
+const closest = (arr, goal) => {
+  return arr.reduce((prev, curr) => {
+    return (Math.abs(curr - goal) < Math.abs(prev - goal) ? curr : prev);
+  });
+}
+
+const moveItem = (array, to, from) => {
+  const item = array[from];
+  array.splice(from, 1);
+  array.splice(to, 0, item);
+  return array;
+};
+
 const languages = [
   { name: 'JavaScript', extension: '(js)', mode: 'javascript' },
   { name: 'Python', extension: '(py)', mode: 'python' },
@@ -99,10 +112,13 @@ function App() {
   const handleFileClick = (id) => {
     setSelectedFile(id)
   }
-
-  const handleDrop = (id, pos = 2) => {
-    let updatedFiles = [...files]
-    updatedFiles.splice(id, 1)
+  
+  const handleDragEnd = (el, id) => {
+    const allElements = Array.from(document.querySelectorAll('.filesTab > div'))
+    const allPosX = allElements.map(element => element.getBoundingClientRect().left)
+    const newID = allPosX.indexOf(closest(allPosX, el.clientX))
+    const updatedFiles = moveItem([...files], newID, id)
+    if(selectedFile == id) setSelectedFile(newID)
     setFiles(updatedFiles)
   }
 
@@ -346,12 +362,12 @@ function App() {
         {files.map((element, i) => (
           <div
             key={i}
+            id={`${i}fileTab`}
             className={selectedFile === i ? 'selectedFileTab' : 'fileTab'}
             title={element.path}
             draggable
             onClick={() => handleFileClick(i)}
-            onDrag={(e) => {e.preventDefault()}}
-            onDrop={() => handleDrop(i)}
+            onDragEnd={(e) => handleDragEnd(e, i)}
           >
             {element.name}
             <div className={`closeFileTab ${element.isChanged ? 'changedFile' : ''}`} onClick={(e) => {handleCloseFile(i); e.stopPropagation()}}>

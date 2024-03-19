@@ -1,10 +1,11 @@
 {
   "name": "car_code",
-  "version": "1.0.0",
+  "productName": "car code",
+  "version": "1.0.2",
   "description": "code editor",
   "main": "./out/main/index.js",
   "author": "car factory",
-  "homepage": "https://electron-vite.org",
+  "homepage": "",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
@@ -25,6 +26,7 @@
     "electron-vite": "^2.1.0",
     "mime-types": "^2.1.35",
     "react-ace": "^10.1.0",
+    "react-draggable": "^4.4.6",
     "react-resizable-panels": "^2.0.13"
   },
   "devDependencies": {
