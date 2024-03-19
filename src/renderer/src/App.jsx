@@ -100,6 +100,12 @@ function App() {
     setSelectedFile(id)
   }
 
+  const handleDrop = (id, pos = 2) => {
+    let updatedFiles = [...files]
+    updatedFiles.splice(id, 1)
+    setFiles(updatedFiles)
+  }
+
   const handleCloseFile = (id) => {
     const updatedFiles = files.filter((_, index) => index !== id)
     setFiles(updatedFiles)
@@ -191,7 +197,26 @@ function App() {
   }, [files, selectedFile])
 
   useEffect(() => {
+    const handleUpdateFile = (args) => {
+      const { path, data } = args[0]
+      const updatedFiles = files.map(file => {
+        if(file.path == path) {
+          file.data = data
+        }
+
+        return file
+      })
+
+      setFiles(updatedFiles)
+    }
+
     localStorage.setItem('files', JSON.stringify(files))
+    ipcRenderer.send('watchFiles', files)
+    ipcRenderer.on('updateFile', handleUpdateFile)
+
+    return () => {
+      ipcRenderer.removeAllListeners('updateFile')
+    }
   }, [files])
 
   useEffect(() => {
@@ -263,7 +288,6 @@ function App() {
         <div>Edit</div>
         <div>Terminal</div>
         <div>Help</div>
-        <div>{'<------- przyciski tymczasowo nie działają'}</div>
       </div>
       <div id='windowControls'>
         <div onClick={() => {
@@ -306,7 +330,7 @@ function App() {
       <PanelGroup direction="horizontal" id="allPanels">
         {showLeftPanel && (
           <>
-          <Panel defaultSize={20} minSize={20} id={1} order={1}>
+          <Panel defaultSize={10} minSize={10} id={1} order={1}>
           <div className='leftPanelTab'>
             <div className='leftPanelTabTitle'>OPEN EDITORS</div>
           </div>
@@ -324,7 +348,10 @@ function App() {
             key={i}
             className={selectedFile === i ? 'selectedFileTab' : 'fileTab'}
             title={element.path}
+            draggable
             onClick={() => handleFileClick(i)}
+            onDrag={(e) => {e.preventDefault()}}
+            onDrop={() => handleDrop(i)}
           >
             {element.name}
             <div className={`closeFileTab ${element.isChanged ? 'changedFile' : ''}`} onClick={(e) => {handleCloseFile(i); e.stopPropagation()}}>

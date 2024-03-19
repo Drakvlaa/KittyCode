@@ -22,6 +22,7 @@
     "@electron-toolkit/utils": "^3.0.0",
     "ace-builds": "^1.32.7",
     "directory-tree": "^3.5.1",
+    "electron-vite": "^2.1.0",
     "mime-types": "^2.1.35",
     "react-ace": "^10.1.0",
     "react-resizable-panels": "^2.0.13"
@@ -32,7 +33,6 @@
     "@vitejs/plugin-react": "^4.2.1",
     "electron": "^28.2.0",
     "electron-builder": "^24.9.1",
-    "electron-vite": "^2.1.0",
     "eslint": "^8.56.0",
     "eslint-plugin-react": "^7.33.2",
     "prettier": "^3.2.4",

@@ -5,10 +5,11 @@ import mime from 'mime-types'
 import dirTree from 'directory-tree'
 
 const isDev = process.env.NODE_ENV === 'development'
+let watchers = []
 
 function saveFile(path, data) {
   fs.writeFile(path, data, (err) => {
-    console.error(err)
+    if(err) console.error(err)
   })
 }
 
@@ -154,6 +155,22 @@ function createWindow() {
     } else {
       saveFile(path, data)
     }
+  })
+
+  ipcMain.on('watchFiles', (event, ...args) => {
+    watchers.forEach(watcher => {
+      watcher.close()
+    });
+    watchers = args[0].filter(file => fs.existsSync(file.path)).map(file => {
+        return fs.watch(file.path, (eventname, filename) => {
+          if(eventname === 'change') {
+            openFile(file.path)
+            .then(result => {
+              mainWindow.webContents.send('updateFile', { ...result })
+            })
+          }
+        })
+    })
   })
 }
 
