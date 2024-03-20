@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: electron-app
+appId: com.drakvlaa.kittycode
+productName: KittyCode
 directories:
   buildResources: build
 files:
@@ -11,7 +11,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: electron-app
+  executableName: kittycode
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

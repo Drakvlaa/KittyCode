@@ -1,5 +1,6 @@
 out
 dist
+dist-electron
 pnpm-lock.yaml
 LICENSE.md
 tsconfig.json
