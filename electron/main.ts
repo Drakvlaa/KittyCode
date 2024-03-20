@@ -133,7 +133,7 @@ const createWindow = () => {
     openFile(args[0]).then((result) => {
         try {
           const lookup = mime.getType(result.path);
-          if (!lookup) throw new Error("Invalid file type");
+          if (!lookup) throw new Error(`Unknown type of file '${result.path}'`);
   
           const [type, subtype] = lookup.split("/");
   
